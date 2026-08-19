@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Fascinate&family=Federo&display=swap');
+
+* {
+    font-family: "Federo", sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: #3368A0;
+}
+
+
+input {
+    display: none;
+}
+
+.title {
+    color: white;
+    font-size: 52px;
+    text-align: center;
+}
+
+.subtitle {
+    margin-top: 50px;
+    color: white;
+    font-size: 32px;
+}
+
+#section-pet-selection {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.pet-cards {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    display: flex;
+}
+
+.pet-labels {
+    display: flex;
+    width: 180px;
+    height: 100px;
+    background-color: #66A3BF;
+    padding: 5px;
+    border: 1px solid #000000;
+    margin: 10px;
+    text-align: center;
+    border-radius: 20px;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.pet-input:checked + .pet-labels {
+  border: 2px solid #C8DFDB; /* borde verde cuando está seleccionado */
+  border-radius: 20px;
+  background-color: #F2EFE7; /* opcional, para resaltar */
+}
+
+.pet-labels img {
+    width: 80px;
+}
+
+#btn-pet-selection {
+    width: 180px;
+    height: 40px;
+    color: white;
+    background: transparent;
+    border-radius: 20px;
+    border: 2px solid white;
+}
+
+#section-attack-selection {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.attack-buttons{
+    display: flex;
+}
+
+.attack-button {
+    width: 180px;
+    height: 40px;
+    color: white;
+    background: transparent;
+    border-radius: 20px;
+    border: 2px solid white;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+#restart{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+}
+
+#final-message{
+    color: white;
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+#btn-restart {
+    width: 144px;
+    height: 32px;
+    color: white;
+    background: transparent;
+    border-radius: 20px;
+    border: 2px solid white;
+}
+
+#pets-selected-info{
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.pet-selected-card{
+    border: 2px solid #F2EFE7;
+    background-color: #C8DFDB;
+    display: flex;
+    flex-direction: column;
+    width: 120px;
+    min-height: 120px;
+    align-items: center;
+    border-radius: 20px;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+@media (max-width: 580px){
+    .pet-cards, .attack-buttons{
+        flex-direction: column;
+        align-items: center;
+    }
+    
+}
