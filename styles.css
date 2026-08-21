@@ -99,7 +99,7 @@ input {
     margin-right: 10px;
 }
 
-#restart{
+#section-restart{
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -121,7 +121,7 @@ input {
     border: 2px solid white;
 }
 
-#pets-selected-info{
+#section-pets-selected-info{
     justify-content: center;
     margin-top: 20px;
 }
