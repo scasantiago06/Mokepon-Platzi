@@ -137,6 +137,10 @@ function joinToGame() {
 }
 
 function sendMokeponSelected(petSelected) {
+  const fullPath = petSelected.canvasImage.src;
+  const withoutPrefix = fullPath.replace("file:///", "");
+  const relativePath = withoutPrefix.substring(withoutPrefix.indexOf("assets"));
+
   const mokeponData = {
     name: petSelected.name,
     picture: petSelected.picture,
@@ -146,9 +150,10 @@ function sendMokeponSelected(petSelected) {
     yPos: petSelected.yPos,
     width: petSelected.width,
     height: petSelected.height,
-    mapImage: petSelected.canvasImage.src,
+    mapImage: "./" + relativePath,
   };
-  
+
+  console.log("Sending mokepon data:", mokeponData);
   fetch(`http://localhost:8080/mokepon/${playerId}`, {
     method: "post",
     headers: { "content-type": "application/json" },
@@ -170,34 +175,34 @@ function sendPosition(x, y) {
   }).then(function (res) {
     if (res.ok) {
       res.json().then(({ enemies }) => {
-        if (enemies.length > 0) {
-          enemies.forEach((enemy) => {
-            let enemyMokepon = enemy.mokepon || "";
+        const validEnemies = enemies || [];
 
-            let newMokepon = new Mokepon(
-              enemyMokepon.name,
-              enemyMokepon.picture,
-              enemyMokepon.lives,
-              enemyMokepon.mapImage,
-              enemyMokepon.id,
-            );
+        validEnemies.forEach((enemy) => {
+          const enemyMokepon = enemy.mokepon;
+          console.log(enemyMokepon);
+          if (!enemyMokepon) {
+            return;
+          }
 
-            const existingPet = enemyPets.find(
-              (pet) => pet.id === enemyMokepon.id,
-            );
-
-            if (existingPet) {
-              existingPet.xPos = enemyMokepon.xPos;
-              existingPet.yPos = enemyMokepon.yPos;
-            } else {
-              newMokepon.xPos = enemyMokepon.xPos;
-              newMokepon.yPos = enemyMokepon.yPos;
-              enemyPets.push(newMokepon);
-            }
-
-            //newMokepon.drawMokepon();
-          });
-        }
+          const existingPet = enemyPets.find(
+            (pet) => pet.id === enemyMokepon.id,
+          );
+          if (existingPet) {
+            existingPet.xPos = enemyMokepon.xPos;
+            existingPet.yPos = enemyMokepon.yPos;
+            return;
+          }
+          const newMokepon = new Mokepon(
+            enemyMokepon.name,
+            enemyMokepon.picture,
+            enemyMokepon.lives,
+            enemyMokepon.mapImage,
+            enemyMokepon.id,
+          );
+          newMokepon.xPos = enemyMokepon.xPos;
+          newMokepon.yPos = enemyMokepon.yPos;
+          enemyPets.push(newMokepon);
+        });
       });
     }
   });
@@ -295,6 +300,7 @@ function selectPet() {
     return;
   }
 
+  petSelected.setPositionInMap();
   sendMokeponSelected(petSelected);
   setupAfterSelection();
 }
@@ -357,8 +363,6 @@ function setupCanvas() {
   interval = setInterval(updateCanvas, 50);
   mapBackground.src = "./assets/mokemap.png";
 
-  petSelected.setPositionInMap();
-
   //if (!enemyPets) enemyPets = pets.filter((pet) => pet !== petSelected);
 
   // enemyPets.forEach((pet) => {
@@ -381,16 +385,18 @@ function updateCanvas() {
     0,
     Math.min(petSelected.yPos, map.height - petSelected.height),
   );
+
   mapContext.drawImage(mapBackground, 0, 0, map.width, map.height);
   petSelected.drawMokepon();
-  sendPosition(petSelected.xPos, petSelected.yPos);
 
-  //console.log(enemyPets);
-  // enemyPets.forEach((pet) => {
-  //   pet.drawMokepon();
-  //   if (petSelected.xVelocity !== 0 || petSelected.yVelocity !== 0)
-  //     detectCollision(pet);
-  // });
+  // if (enemyPets.length !== 0)
+  //   console.log(enemyPets)
+
+  enemyPets.forEach((pet) => {
+    pet.drawMokepon();
+  });
+
+  sendPosition(petSelected.xPos, petSelected.yPos);
 }
 
 function moveRight() {
