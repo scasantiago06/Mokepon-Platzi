@@ -85,7 +85,7 @@ let enemyPet;
 let enemyPets = [];
 // Selected attacks
 let playerAttack;
-let enemyAttack;
+let enemyAttackReference;
 // Lives counts
 let myPetLivesCount = 3;
 let enemyPetLivesCount = 3;
@@ -112,7 +112,7 @@ function DOMloaded() {
   document.addEventListener("keyup", stopMoving);
   sectionAttackSelection.style.display = "none";
   sectionPetsSelectedInfo.style.display = "none";
-  sectionRestart.style.visibility = "hidden";
+  sectionRestart.style.display = "none";
   sectionMap.style.display = "none";
 
   pets.push(hipodoge, capipepo, ratigueya);
@@ -179,7 +179,6 @@ function sendPosition(x, y) {
 
         validEnemies.forEach((enemy) => {
           const enemyMokepon = enemy.mokepon;
-          console.log(enemyMokepon);
           if (!enemyMokepon) {
             return;
           }
@@ -206,6 +205,75 @@ function sendPosition(x, y) {
       });
     }
   });
+}
+
+function setEnemy(enemyMokepon) {
+  fetch(`http://localhost:8080/mokepon/${playerId}/enemy`, {
+    method: "post",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ enemyMokepon }),
+  }).then(function (res) {
+    if (res.ok) {
+      res.json().then(({ playerInfo }) => {
+        console.log("Player info:", playerInfo);
+      });
+    }
+  });
+}
+
+function sendAttack(playerAttack) {
+  fetch(`http://localhost:8080/mokepon/${playerId}/fight`, {
+    method: "post",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ playerAttack }),
+  })
+    .then((res) => res.json())
+    .then(({ enemyAttack, result, playerLives, enemyLives }) => {
+      console.log("Enemy attack:", enemyAttack);
+      if (enemyAttack) {
+        enemyAttackReference = enemyAttack;
+        myPetLivesCount = playerLives;
+        enemyPetLivesCount = enemyLives;
+        showResult();
+        checkGameWinner();
+        setupConsole();
+        checkAfterAttack(enemyPet.id);
+        console.log("Enemy mokepon: ", enemyPet);
+        finalMessage.textContent = `${result}`;
+      } else {
+        finalMessage.textContent = "Esperando jugador...";
+        setTimeout(() => {
+          sendAttack(playerAttack);
+        }, 1000);
+      }
+    });
+}
+
+function checkAfterAttack(enemyMokeponId) {
+  console.log(`${enemyMokeponId}`);
+  fetch(`http://localhost:8080/mokepon/${playerId}/fightSolved`, {
+    method: "post",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ enemyMokeponId }),
+  })
+    .then((res) => res.json())
+    .then(({ solved }) => {
+      if (solved) {
+        console.log("Round solved");
+        fetch(`http://localhost:8080/mokepon/${playerId}/restartRound`, {
+          method: "post",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ enemyMokeponId, canRestart: true }),
+        }).then(() => {
+          toggleAttackButtons(false)
+          finalMessage.textContent = "Siguiente ronda";
+        });
+      } else {
+        setTimeout(() => {
+          checkAfterAttack(enemyMokeponId);
+        }, 1000);
+      }
+    });
 }
 
 //#endregion
@@ -249,16 +317,23 @@ function setupAttackButtons(attacks) {
 function attack(event) {
   if (!blockAttacks && petSelected) {
     playerAttack = event.target.textContent;
-    enemyAttackSelection();
+    toggleAttackButtons(true);
+    sendAttack(playerAttack);
   } else if (!petSelected) {
     alert("Selecciona una mascota antes de atacar");
   }
 }
 
+function toggleAttackButtons(state) {
+  let attackButtons = document.querySelectorAll(".attack-button");
+
+  attackButtons.forEach((button) => {
+    button.disabled = state;
+  });
+}
+
 function setupAttacks() {
   hipodoge.attacks.push(
-    { name: "💧", id: "btn-water-attack" },
-    { name: "💧", id: "btn-water-attack" },
     { name: "💧", id: "btn-water-attack" },
     { name: "🔥", id: "btn-fire-attack" },
     { name: "🌱", id: "btn-ground-attack" },
@@ -266,15 +341,11 @@ function setupAttacks() {
 
   capipepo.attacks.push(
     { name: "🌱", id: "btn-ground-attack" },
-    { name: "🌱", id: "btn-ground-attack" },
-    { name: "🌱", id: "btn-ground-attack" },
     { name: "💧", id: "btn-water-attack" },
     { name: "🔥", id: "btn-fire-attack" },
   );
 
   ratigueya.attacks.push(
-    { name: "🔥", id: "btn-fire-attack" },
-    { name: "🔥", id: "btn-fire-attack" },
     { name: "🔥", id: "btn-fire-attack" },
     { name: "💧", id: "btn-water-attack" },
     { name: "🌱", id: "btn-ground-attack" },
@@ -322,7 +393,9 @@ function setupFightSection(enemyCollisioned) {
 
   sectionMap.style.display = "none";
   sectionAttackSelection.style.display = "flex";
-  sectionRestart.style.visibility = "hidden";
+  sectionRestart.style.display = "flex";
+  finalMessage.textContent = "Que comience el combate";
+  btnFinishFight.style.visibility = "hidden";
   sectionPetsSelectedInfo.style.display = "flex";
 
   myPetLivesCount = petSelected.lives;
@@ -362,13 +435,6 @@ function setupCanvas() {
   map.height = mapHeight;
   interval = setInterval(updateCanvas, 50);
   mapBackground.src = "./assets/mokemap.png";
-
-  //if (!enemyPets) enemyPets = pets.filter((pet) => pet !== petSelected);
-
-  // enemyPets.forEach((pet) => {
-  //   pet.xPos = randomNumber(10, map.width - pet.width);
-  //   pet.yPos = randomNumber(10, map.height - pet.height);
-  // });
 }
 
 function updateCanvas() {
@@ -389,11 +455,9 @@ function updateCanvas() {
   mapContext.drawImage(mapBackground, 0, 0, map.width, map.height);
   petSelected.drawMokepon();
 
-  // if (enemyPets.length !== 0)
-  //   console.log(enemyPets)
-
   enemyPets.forEach((pet) => {
     pet.drawMokepon();
+    detectCollision(pet);
   });
 
   sendPosition(petSelected.xPos, petSelected.yPos);
@@ -443,14 +507,8 @@ function detectCollision(enemy) {
   }
 
   stopMoving();
+  setEnemy(enemy);
   setupFightSection(enemy);
-}
-
-function enemyAttackSelection() {
-  let randomAttack = randomNumber(0, enemyPet.attacks.length - 1);
-  enemyAttack = enemyPet.attacks[randomAttack].name;
-
-  setupConsole();
 }
 
 function setupConsole() {
@@ -460,44 +518,12 @@ function setupConsole() {
   sectionEnemyAttacksHistory.prepend(enemyAttackMessage);
 
   myAttackMessage.textContent = playerAttack;
-  enemyAttackMessage.textContent = enemyAttack;
-
-  switch (checkRoundWinner()) {
-    case "EMPATE":
-      myAttackMessage.textContent = playerAttack + "😑";
-      enemyAttackMessage.textContent = enemyAttack + "😑";
-      break;
-    case "GANASTE":
-      myAttackMessage.textContent = playerAttack + "😁";
-      enemyAttackMessage.textContent = enemyAttack + "😡";
-      break;
-    case "PERDISTE":
-      myAttackMessage.textContent = playerAttack + "😡";
-      enemyAttackMessage.textContent = enemyAttack + "😁";
-      break;
-    default:
-      break;
-  }
-
-  checkGameWinner();
+  enemyAttackMessage.textContent = enemyAttackReference;
 }
 
-function checkRoundWinner() {
-  if (playerAttack === enemyAttack) {
-    return "EMPATE";
-  } else if (
-    (playerAttack === "🔥" && enemyAttack === "🌱") ||
-    (playerAttack === "💧" && enemyAttack === "🔥") ||
-    (playerAttack === "🌱" && enemyAttack === "💧")
-  ) {
-    enemyPetLivesCount--;
-    enemyPetLives.innerHTML = enemyPetLivesCount;
-    return "GANASTE";
-  } else {
-    myPetLivesCount--;
-    myPetLives.innerHTML = myPetLivesCount;
-    return "PERDISTE";
-  }
+function showResult() {
+  enemyPetLives.innerHTML = enemyPetLivesCount;
+  myPetLives.innerHTML = myPetLivesCount;
 }
 
 function checkGameWinner() {
@@ -508,7 +534,7 @@ function checkGameWinner() {
       btnFinishFight.addEventListener("click", restartGame);
       btnFinishFight.textContent = "Reinciar juego";
       finalMessage.textContent = "Perdiste el juego";
-      sectionRestart.style.visibility = "visible";
+      btnFinishFight.style.visibility = "visible";
     }, 100);
   } else if (enemyPetLivesCount === 0) {
     blockAttacks = true;
@@ -528,7 +554,7 @@ function checkGameWinner() {
         finalMessage.textContent = "Ganaste la pelea";
       }
 
-      sectionRestart.style.visibility = "visible";
+      btnFinishFight.style.visibility = "visible";
     }, 100);
   }
 }
@@ -542,7 +568,7 @@ function continueGame() {
   sectionEnemyAttacksHistory.replaceChildren();
   sectionMap.style.display = "flex";
   sectionAttackSelection.style.display = "none";
-  sectionRestart.style.visibility = "hidden";
+  sectionRestart.style.display = "none";
   sectionPetsSelectedInfo.style.display = "none";
   setupCanvas();
   updateCanvas();
